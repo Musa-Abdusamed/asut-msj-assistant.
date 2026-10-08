@@ -1,0 +1,19 @@
+# ASTU MSJ Bootcamp
+
+The bootcamp is designed to help students improve their programming and problem-solving skills.
+
+# Registration Requirements
+
+Students must provide their full name, email address, department, academic year, GitHub username, and Codeforces username.
+
+# Assignments
+
+Students are expected to solve programming problems every week. Assignment submissions must be completed before the weekly deadline.
+
+# Attendance
+
+Students are expected to attend bootcamp sessions regularly. Students should communicate with their mentor if they cannot attend a session.
+
+# Programming Practice
+
+Students should practice programming problems on platforms such as Codeforces. Regular practice is important for improving competitive programming skills.
