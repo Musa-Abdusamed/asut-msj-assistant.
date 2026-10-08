@@ -17,6 +17,12 @@ async function answerQuestion(question) {
     questionEmbedding,
     3
   );
+  if (results.length === 0) {
+  return {
+    answer: "I don't have enough information in the provided documents.",
+    sources: []
+  };
+}
 
   const context = results
     .map((result) => result.text)

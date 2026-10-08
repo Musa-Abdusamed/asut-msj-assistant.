@@ -3,6 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
+const chatRoutes = require("./routes/chat.routes");
+
 const app = express();
 
 app.use(cors());
@@ -13,6 +15,8 @@ app.get("/", (req, res) => {
     message: "RAG backend is running"
   });
 });
+
+app.use("/api/chat", chatRoutes);
 
 const PORT = 5000;
 

@@ -12,7 +12,7 @@ async function testRAG() {
   await ingestDocument();
 
   const question =
-    "What information do students need to provide during registration?";
+     "What is the population of Ethiopia?";
 
   const result = await answerQuestion(question);
 

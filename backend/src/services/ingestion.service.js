@@ -8,10 +8,24 @@ const {
 } = require("./embedding.service");
 
 const {
+  loadVectorStore,
+  getVectorStore,
   addToVectorStore
 } = require("./search.service");
 
 async function ingestDocument() {
+  await loadVectorStore();
+
+  const existingVectors = getVectorStore();
+
+  if (existingVectors.length > 0) {
+    console.log(
+      `Vector store already contains ${existingVectors.length} chunks.`
+    );
+
+    return;
+  }
+
   const text = await readDocument();
 
   const chunks = chunkDocument(text);
@@ -19,7 +33,7 @@ async function ingestDocument() {
   for (const chunk of chunks) {
     const embedding = await createEmbedding(chunk.text);
 
-    addToVectorStore(chunk, embedding);
+    await addToVectorStore(chunk, embedding);
 
     console.log(
       `Embedded chunk ${chunk.id}: ${chunk.section}`
