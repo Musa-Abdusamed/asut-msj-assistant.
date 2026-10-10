@@ -17,3 +17,7 @@ Students are expected to attend bootcamp sessions regularly. Students should com
 # Programming Practice
 
 Students should practice programming problems on platforms such as Codeforces. Regular practice is important for improving competitive programming skills.
+
+# Mentors
+
+Students can contact their mentor when they need help with programming practice or assignments.
