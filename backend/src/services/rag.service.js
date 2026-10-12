@@ -12,35 +12,31 @@ const {
 } = require("./local-search.service");
 
 const {
-  generateAnswer
+  generateAnswer,
+  generateAnswerStream
 } = require("./llm.service");
 
-async function answerQuestion(question, history = []) {
-  console.log("RAG TEST MODE:", process.env.RAG_TEST_MODE);
-
-  const lastUserMessage = [...history]
-    .reverse()
-    .find((message) => message.role === "user");
-
-  const isFollowUp =
-    /\b(what about|and|that|those|it|their|them)\b/i.test(question);
-
-  const searchQuestion = question;
-
+async function retrieveContext(question) {
   let results;
 
   if (process.env.RAG_TEST_MODE === "true") {
-    results = searchLocally(searchQuestion, 3);
+    results = searchLocally(question, 3);
   } else {
-    const questionEmbedding = await createEmbedding(searchQuestion);
+    const questionEmbedding = await createEmbedding(question);
 
     results = searchSimilarChunks(
-  questionEmbedding,
-  1,
-  0.65,
-  question
-);
+      questionEmbedding,
+      3,
+      0.45,
+      question
+    );
   }
+
+  return results;
+}
+
+async function answerQuestion(question, history = []) {
+  const results = await retrieveContext(question);
 
   if (results.length === 0) {
     return {
@@ -78,6 +74,57 @@ async function answerQuestion(question, history = []) {
   };
 }
 
+async function answerQuestionStream(
+  question,
+  history = [],
+  onChunk
+) {
+  const results = await retrieveContext(question);
+
+  if (results.length === 0) {
+    const answer =
+      "I don't have enough information in the provided documents.";
+
+    onChunk(answer);
+
+    return {
+      answer,
+      sources: []
+    };
+  }
+
+  const context = results
+    .map((result) => result.text)
+    .join("\n\n");
+
+  let answer;
+
+  if (process.env.RAG_TEST_MODE === "true") {
+    answer = results[0].text
+      .replace(/^# .+\n?/, "")
+      .trim();
+
+    onChunk(answer);
+  } else {
+    answer = await generateAnswerStream(
+      question,
+      context,
+      history,
+      onChunk
+    );
+  }
+
+  return {
+    answer,
+    sources: results.map((result) => ({
+      section: result.section,
+      source: result.source,
+      score: result.score
+    }))
+  };
+}
+
 module.exports = {
-  answerQuestion
+  answerQuestion,
+  answerQuestionStream
 };

@@ -11,11 +11,7 @@ let documentHash = null;
 
 async function loadVectorStore() {
   try {
-    const data = await fs.readFile(
-      vectorFilePath,
-      "utf-8"
-    );
-
+    const data = await fs.readFile(vectorFilePath, "utf-8");
     const parsedData = JSON.parse(data);
 
     vectorStore = parsedData.vectors || [];
@@ -24,7 +20,6 @@ async function loadVectorStore() {
     if (error.code === "ENOENT") {
       vectorStore = [];
       documentHash = null;
-
       await saveVectorStore();
     } else {
       throw error;
@@ -65,6 +60,54 @@ async function addToVectorStore(chunk, embedding) {
 
   await saveVectorStore();
 }
+
+function listDocuments() {
+  const documents = new Map();
+
+  for (const item of vectorStore) {
+    const source = item.source || "unknown";
+
+    if (!documents.has(source)) {
+      documents.set(source, {
+        filename: source,
+        chunks: 0,
+        sections: new Set()
+      });
+    }
+
+    const document = documents.get(source);
+    document.chunks += 1;
+
+    if (item.section) {
+      document.sections.add(item.section);
+    }
+  }
+
+  return [...documents.values()].map((document) => ({
+    filename: document.filename,
+    chunks: document.chunks,
+    sections: [...document.sections]
+  }));
+}
+
+async function deleteDocument(filename) {
+  const normalizedFilename = path.basename(filename);
+
+  const originalLength = vectorStore.length;
+
+  vectorStore = vectorStore.filter(
+    (item) => item.source !== normalizedFilename
+  );
+
+  const deletedChunks = originalLength - vectorStore.length;
+
+  if (deletedChunks > 0) {
+    await saveVectorStore();
+  }
+
+  return deletedChunks;
+}
+
 function tokenize(text) {
   return text
     .toLowerCase()
@@ -90,7 +133,7 @@ function keywordSimilarity(question, chunk) {
   );
 
   const chunkWords = new Set(
-    tokenize(`${chunk.section} ${chunk.text}`)
+    tokenize(`${chunk.section || ""} ${chunk.text || ""}`)
   );
 
   if (questionWords.size === 0) {
@@ -103,6 +146,7 @@ function keywordSimilarity(question, chunk) {
 
   return matches / questionWords.size;
 }
+
 function searchSimilarChunks(
   queryEmbedding,
   topK = 3,
@@ -115,14 +159,9 @@ function searchSimilarChunks(
       item.embedding
     );
 
-    const keywordScore = keywordSimilarity(
-      question,
-      item
-    );
+    const keywordScore = keywordSimilarity(question, item);
 
-const score =
-  semanticScore +
-  keywordScore * 0.05;
+    const score = semanticScore + keywordScore * 0.05;
 
     return {
       id: item.id,
@@ -164,10 +203,12 @@ const score =
 }
 
 function cosineSimilarity(vectorA, vectorB) {
+  if (!Array.isArray(vectorA) || !Array.isArray(vectorB)) {
+    throw new Error("Both embeddings must be arrays.");
+  }
+
   if (vectorA.length !== vectorB.length) {
-    throw new Error(
-      "Vectors must have the same dimensions"
-    );
+    throw new Error("Vectors must have the same dimensions");
   }
 
   let dotProduct = 0;
@@ -187,10 +228,7 @@ function cosineSimilarity(vectorA, vectorB) {
     return 0;
   }
 
-  return (
-    dotProduct /
-    (magnitudeA * magnitudeB)
-  );
+  return dotProduct / (magnitudeA * magnitudeB);
 }
 
 module.exports = {
@@ -200,5 +238,8 @@ module.exports = {
   getDocumentHash,
   setDocumentHash,
   addToVectorStore,
-  searchSimilarChunks
+  listDocuments,
+  deleteDocument,
+  searchSimilarChunks,
+  cosineSimilarity
 };

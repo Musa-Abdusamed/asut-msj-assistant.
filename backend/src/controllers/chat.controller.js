@@ -1,16 +1,17 @@
+
 const {
   ingestDocument
 } = require("../services/ingestion.service");
 
 const {
-  answerQuestion
+  answerQuestionStream
 } = require("../services/rag.service");
 
 let isInitialized = false;
 
 async function chat(req, res) {
   try {
-    const { question } = req.body;
+    const { question, history = [] } = req.body;
 
     if (
       typeof question !== "string" ||
@@ -26,16 +27,57 @@ async function chat(req, res) {
       isInitialized = true;
     }
 
-    const { history = [] } = req.body;
+    res.status(200);
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
 
-const result = await answerQuestion(question, history);
+    const result = await answerQuestionStream(
+      question,
+      history,
+      (chunk) => {
+        res.write(
+          `data: ${JSON.stringify({
+            type: "chunk",
+            text: chunk
+          })}\n\n`
+        );
+      }
+    );
 
-    return res.status(200).json(result);
+    res.write(
+      `data: ${JSON.stringify({
+        type: "sources",
+        sources: result.sources
+      })}\n\n`
+    );
+
+    res.write(
+      `data: ${JSON.stringify({
+        type: "done"
+      })}\n\n`
+    );
+
+    res.end();
   } catch (error) {
     console.error("Chat error:", error);
 
     if (res.headersSent) {
-      return;
+      res.write(
+        `data: ${JSON.stringify({
+          type: "error",
+          message:
+            error.status === 429
+              ? "Gemini API quota exceeded. Please try again later."
+              : error.status === 503
+                ? "Gemini is temporarily unavailable. Please try again later."
+                : "Failed to generate answer"
+        })}\n\n`
+      );
+
+      return res.end();
     }
 
     if (error.status === 429) {

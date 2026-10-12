@@ -5,9 +5,7 @@ const {
   chunkDocument
 } = require("./document.service");
 
-const {
-  createEmbedding
-} = require("./embedding.service");
+const { createEmbedding } = require("./embedding.service");
 
 const {
   loadVectorStore,
@@ -28,55 +26,51 @@ function createDocumentHash(text) {
 async function ingestDocument() {
   await loadVectorStore();
 
-  const text = await readDocument();
-
+  const text = await readDocument("knowledge.txt");
   const currentHash = createDocumentHash(text);
   const existingHash = getDocumentHash();
   const existingVectors = getVectorStore();
 
-  if (
-    existingVectors.length > 0 &&
-    existingHash === currentHash
-  ) {
-    console.log(
-      `Vector store already contains ${existingVectors.length} chunks.`
-    );
+  const defaultChunks = existingVectors.filter(
+    (item) => item.source === "knowledge.txt"
+  );
 
+  if (
+    existingHash === currentHash &&
+    defaultChunks.length === chunkDocument(text).length
+  ) {
+    console.log("Default knowledge document is already indexed.");
     return;
   }
 
-  console.log(
-    "Document changed or vector store is empty."
+  console.log("Re-indexing default knowledge document...");
+
+  const remainingVectors = existingVectors.filter(
+    (item) => item.source !== "knowledge.txt"
   );
 
-  console.log("Rebuilding vector store...");
-
-  existingVectors.length = 0;
+  existingVectors.splice(
+    0,
+    existingVectors.length,
+    ...remainingVectors
+  );
 
   setDocumentHash(currentHash);
 
-  const chunks = chunkDocument(text);
+  const chunks = chunkDocument(text, "knowledge.txt");
 
   for (const chunk of chunks) {
     const embedding = await createEmbedding(chunk.text);
+    await addToVectorStore(chunk, embedding);
 
-    await addToVectorStore(
-      chunk,
-      embedding
-    );
-
-    console.log(
-      `Embedded chunk ${chunk.id}: ${chunk.section}`
-    );
+    console.log(`Embedded chunk: ${chunk.section}`);
   }
 
   await saveVectorStore();
 
   console.log(
-    "Document ingestion completed."
+    `Default knowledge document indexed: ${chunks.length} chunks.`
   );
 }
 
-module.exports = {
-  ingestDocument
-};
+module.exports = { ingestDocument };

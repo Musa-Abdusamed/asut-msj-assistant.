@@ -1,16 +1,36 @@
 const fs = require("fs/promises");
 const path = require("path");
+const { PDFParse } = require("pdf-parse");
 
-async function readDocument() {
-  const filePath = path.join(__dirname, "../data/knowledge.txt");
+async function extractPdfText(buffer) {
+  const parser = new PDFParse({ data: buffer });
 
-  const text = await fs.readFile(filePath, "utf-8");
-
-  return text;
+  try {
+    const result = await parser.getText();
+    return result.text;
+  } finally {
+    await parser.destroy();
+  }
 }
-function chunkDocument(text) {
-  const lines = text.split(/\r?\n/);
 
+async function readDocument(filename = "knowledge.txt") {
+  const filePath = path.join(__dirname, "../data", filename);
+  const extension = path.extname(filename).toLowerCase();
+
+  if (extension === ".pdf") {
+    const buffer = await fs.readFile(filePath);
+    return extractPdfText(buffer);
+  }
+
+  if (extension === ".txt") {
+    return fs.readFile(filePath, "utf-8");
+  }
+
+  throw new Error("Unsupported document type. Use .txt or .pdf.");
+}
+
+function chunkDocument(text, source = "knowledge.txt") {
+  const lines = text.split(/\r?\n/);
   const chunks = [];
   let currentChunk = "";
   let currentSection = "";
@@ -21,12 +41,12 @@ function chunkDocument(text) {
         chunks.push({
           id: chunks.length + 1,
           text: currentChunk.trim(),
-          source: "knowledge.txt",
+          source,
           section: currentSection
         });
       }
 
-      currentSection = line.replace("# ", "").trim();
+      currentSection = line.slice(2).trim();
       currentChunk = line;
     } else {
       currentChunk += "\n" + line;
@@ -37,16 +57,16 @@ function chunkDocument(text) {
     chunks.push({
       id: chunks.length + 1,
       text: currentChunk.trim(),
-      source: "knowledge.txt",
+      source,
       section: currentSection
     });
   }
 
   return chunks;
-
 }
 
 module.exports = {
   readDocument,
-  chunkDocument
+  chunkDocument,
+  extractPdfText
 };

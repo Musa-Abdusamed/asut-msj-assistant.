@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-async function generateAnswer(question, context, history = []) {
+function buildPrompt(question, context, history = []) {
   const conversationHistory = history
     .map((message) => {
       const role =
@@ -15,7 +15,7 @@ async function generateAnswer(question, context, history = []) {
     })
     .join("\n");
 
-  const prompt = `
+  return `
 You are a helpful assistant for the ASTU MSJ Bootcamp.
 
 RULES:
@@ -39,9 +39,11 @@ ${question}
 
 DIRECT ANSWER:
 `;
-console.log("CURRENT QUESTION:", question);
-console.log("CONVERSATION HISTORY:", JSON.stringify(history, null, 2));
-console.log("DOCUMENT CONTEXT:", context);
+}
+
+async function generateAnswer(question, context, history = []) {
+  const prompt = buildPrompt(question, context, history);
+
   const response = await ai.models.generateContent({
     model: "gemini-3.7-flash",
     contents: prompt
@@ -50,6 +52,34 @@ console.log("DOCUMENT CONTEXT:", context);
   return response.text;
 }
 
+async function generateAnswerStream(
+  question,
+  context,
+  history = [],
+  onChunk
+) {
+  const prompt = buildPrompt(question, context, history);
+
+  const response = await ai.models.generateContentStream({
+    model: "gemini-3.7-flash",
+    contents: prompt
+  });
+
+  let answer = "";
+
+  for await (const chunk of response) {
+    const text = chunk.text || "";
+
+    if (text) {
+      answer += text;
+      onChunk(text);
+    }
+  }
+
+  return answer;
+}
+
 module.exports = {
-  generateAnswer
+  generateAnswer,
+  generateAnswerStream
 };
