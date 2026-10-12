@@ -4,7 +4,7 @@ An AI-powered assistant for the ASTU MSJ Bootcamp that helps students find infor
 
 ## 📸 Application Preview
 
-![ASUT MSJ Assistant Preview](frontend/assets/preview.png)
+![ASUT MSJ Assistant Preview](frontend/src/assets/preview.png)
 
 ## 📖 Overview
 
