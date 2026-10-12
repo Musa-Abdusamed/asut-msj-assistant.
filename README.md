@@ -261,7 +261,7 @@ GitHub: [@Musa-Abdusamed](https://github.com/Musa-Abdusamed)
 
 👉 [Open Live Demo](https://astu-msj-assistant.vercel.app/)
 
-Explore the application and experience how AI-powered Retrieval-Augmented Generation (RAG) helps users find information about the ASTU MSJ Bootcamp.
+Explore the application and experience how AI-powered Retrieval-Augmented Generation (RAG) helps users find information about the ASTU MSJ.
 
 > **Note:** The backend may take a little time to respond after a period of inactivity because it is hosted on Render's free tier.
 
